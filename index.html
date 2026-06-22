@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, touch-action: none">
+    <title>❤️ Catch My Heart</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            background: linear-gradient(180deg, #ff3c6e 0%, #ff6b8a 30%, #ff9ec5 70%, #ffc1d6 100%);
+            height: 100vh;
+            width: 100vw;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            position: fixed;
+        }
+
+        #game {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        #game:active {
+            cursor: grabbing;
+        }
+
+        #ui {
+            position: absolute;
+            top: 12px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: clamp(16px, 4vw, 22px);
+            font-weight: bold;
+            z-index: 100;
+            text-shadow: 0 0 8px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+        }
+
+        #ui span {
+            display: inline-block;
+            min-width: 28px;
+            text-align: center;
+        }
+
+        .heart {
+            position: absolute;
+            font-size: 38px;
+            pointer-events: none;
+            animation: wobble 0.8s ease-in-out infinite;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
+            will-change: transform, top;
+        }
+
+        @keyframes wobble {
+            0%,
+            100% {
+                transform: rotate(-5deg) scale(1);
+            }
+            25% {
+                transform: rotate(4deg) scale(1.06);
+            }
+            50% {
+                transform: rotate(-2deg) scale(0.94);
+            }
+            75% {
+                transform: rotate(5deg) scale(1.04);
+            }
+        }
+
+        #basket {
+            position: absolute;
+            bottom: 90px;
+            font-size: 60px;
+            z-index: 10;
+            pointer-events: none;
+            transform: translateX(-50%);
+            filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.35));
+            will-change: left;
+        }
+
+        #basket.catch-flash {
+            animation: basketPop 0.2s ease-out;
+        }
+
+        @keyframes basketPop {
+            0% {
+                transform: translateX(-50%) scale(1);
+            }
+            40% {
+                transform: translateX(-50%) scale(1.25);
+            }
+            100% {
+                transform: translateX(-50%) scale(1);
+            }
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 14px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .controls button {
+            width: 70px;
+            height: 50px;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 25px;
+            font-size: 26px;
+            margin: 0 20px;
+            background: rgba(255, 255, 255, 0.85);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            pointer-events: auto;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .controls button:active {
+            transform: scale(0.9);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 1);
+        }
+
+        #gameOverOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        #gameOverOverlay.active {
+            display: flex;
+        }
+
+        #gameOverCard {
+            background: rgba(255, 255, 255, 0.96);
+            color: #e63950;
+            padding: 20px 28px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            z-index: 210;
+            max-width: 90vw;
+            animation: cardIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes cardIn {
+            0% {
+                transform: scale(0.7) translateY(40px);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
+        #gameOverCard h2 {
+            margin: 0 0 8px;
+            font-size: 26px;
+        }
+        #gameOverCard p {
+            margin: 4px 0;
+            font-size: 16px;
+        }
+
+        #restartBtn {
+            margin-top: 12px;
+            padding: 10px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 30px;
+            background: #ff3c6e;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(255, 60, 110, 0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+            display: none;
+            z-index: 215;
+        }
+        #restartBtn.show {
+            display: inline-block;
+        }
+        #restartBtn:active {
+            transform: scale(0.93);
+            box-shadow: 0 2px 6px rgba(255, 60, 110, 0.5);
+        }
+
+        /* Full‑screen interstitial iframe */
+        #iframeContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 250;
+            transform: scale(0);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: white;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
+        }
+
+        #iframeContainer.popIn {
+            transform: scale(1);
+        }
+
+        #iframeContainer iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        #closeHint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 255;
+            color: rgba(0, 0, 0, 0.8);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            pointer-events: none;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #closeHint.visible {
+            opacity: 1;
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            z-index: 90;
+            font-size: 20px;
+            animation: particleUp 0.7s ease-out forwards;
+        }
+
+        @keyframes particleUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-80px) scale(0.3);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game">
+        <div id="ui">
+            ❤️ Score: <span id="score">0</span>
+            &nbsp;&nbsp;
+            💔 Lives: <span id="lives">3</span>
+            <br>
+            🏆 Best: <span id="best">0</span>
+        </div>
+
+        <div id="basket">🧺</div>
+
+        <div id="gameOverOverlay">
+            <div id="gameOverCard">
+                <h2>Game Over 💔</h2>
+                <p>Your score: <span id="finalScore">0</span></p>
+            </div>
+            <button id="restartBtn">Play Again</button>
+            <div id="closeHint">👆 Tap anywhere on the page to close it</div>
+        </div>
+
+        <div id="iframeContainer"></div>
+
+        <div class="controls">
+            <button id="left">⬅️</button>
+            <button id="right">➡️</button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const game = document.getElementById("game");
+            const basket = document.getElementById("basket");
+            const scoreEl = document.getElementById("score");
+            const livesEl = document.getElementById("lives");
+            const bestEl = document.getElementById("best");
+            const finalScoreEl = document.getElementById("finalScore");
+            const gameOverOverlay = document.getElementById("gameOverOverlay");
+            const restartBtn = document.getElementById("restartBtn");
+            const iframeContainer = document.getElementById("iframeContainer");
+            const closeHint = document.getElementById("closeHint");
+
+            let best = parseInt(localStorage.getItem("heartBest")) || 0;
+            bestEl.textContent = best;
+
+            let basketX = window.innerWidth / 2;
+            let targetBasketX = basketX;
+            let items = [];
+            let score = 0;
+            let lives = 3;
+            let speed = 2.8;
+            let playing = true;
+            let noiseTime = 0;
+            let dragging = false;
+            let gameLoopId = null;
+            let spawnTimeout = null;
+
+            basket.style.left = basketX + "px";
+
+            // ============ AUDIO ============
+            let audioCtx = null;
+
+            function getAudio() {
+                if (!audioCtx) {
+                    audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                return audioCtx;
+            }
+
+            function beep(freq, duration, type = "sine") {
+                try {
+                    const ctx = getAudio();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.value = freq;
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + duration);
+                } catch (e) {
+                    // silent
+                }
+            }
+
+            // ============ PARTICLE BURST ============
+            function spawnParticles(x, y, emoji, count = 6) {
+                for (let i = 0; i < count; i++) {
+                    const p = document.createElement("div");
+                    p.className = "particle";
+                    p.textContent = emoji;
+                    p.style.left = (x + (Math.random() - 0.5) * 50) + "px";
+                    p.style.top = y + "px";
+                    p.style.animationDuration = (0.5 + Math.random() * 0.5) + "s";
+                    p.style.fontSize = (16 + Math.random() * 18) + "px";
+                    game.appendChild(p);
+                    setTimeout(() => p.remove(), 800);
+                }
+            }
+
+            // ============ SPAWN A SINGLE ITEM (only one at a time) ============
+            function spawnItem() {
+                if (!playing) return;
+                if (items.length > 0) return; // only one item on screen
+
+                // Determine item type
+                const typeRoll = Math.random();
+                let type;
+                if (typeRoll < 0.7) type = "heart";
+                else if (typeRoll < 0.86) type = "gold";
+                else type = "bomb";
+
+                // Position bias: near the basket's current horizontal position
+                const spread = 180; // how far left/right it can appear from basket
+                let x = targetBasketX + (Math.random() - 0.5) * spread * 2;
+                // Clamp to screen
+                x = Math.max(20, Math.min(window.innerWidth - 20, x));
+
+                const el = document.createElement("div");
+                el.className = "heart";
+                if (type === "heart") el.innerHTML = "❤️";
+                else if (type === "gold") el.innerHTML = "💛";
+                else el.innerHTML = "💣";
+
+                el._x = x;
+                el._y = -50 - Math.random() * 40;
+                el._type = type;
+                el._wobbleOffset = Math.random() * Math.PI * 2;
+
+                el.style.left = el._x + "px";
+                el.style.top = el._y + "px";
+                el.style.animationDelay = (el._wobbleOffset * 0.3) + "s";
+
+                game.appendChild(el);
+                items.push(el);
+            }
+
+            // ============ UPDATE LOOP (with smooth basket) ============
+            function update() {
+                if (!playing) {
+                    gameLoopId = requestAnimationFrame(update);
+                    return;
+                }
+
+                // Smooth basket movement
+                basketX += (targetBasketX - basketX) * 0.25;
+                basket.style.left = basketX + "px";
+
+                const basketRect = basket.getBoundingClientRect();
+                const bx = basketRect.left - 8;
+                const br = basketRect.right + 8;
+                const bt = basketRect.top - 4;
+                const bb = basketRect.bottom;
+
+                for (let i = items.length - 1; i >= 0; i--) {
+                    const it = items[i];
+                    it._y += speed;
+                    it.style.top = it._y + "px";
+
+                    const ir = it.getBoundingClientRect();
+
+                    // Collision check
+                    if (
+                        it._y + 25 > bt &&
+                        ir.left < br &&
+                        ir.right > bx &&
+                        it._y < bb
+                    ) {
+                        const cx = it._x + 17;
+                        const cy = it._y + 17;
+
+                        if (it._type === "heart") {
+                            score += 1;
+                            beep(620, 0.07);
+                            spawnParticles(cx, cy, "❤️", 5);
+                        } else if (it._type === "gold") {
+                            score += 3;
+                            beep(920, 0.09);
+                            beep(1250, 0.07);
+                            spawnParticles(cx, cy, "✨", 8);
+                        } else if (it._type === "bomb") {
+                            lives -= 1;
+                            beep(100, 0.22, "sawtooth");
+                            spawnParticles(cx, cy, "💥", 10);
+                            basket.classList.add("catch-flash");
+                            setTimeout(() => basket.classList.remove("catch-flash"), 200);
+                        }
+
+                        scoreEl.textContent = score;
+                        livesEl.textContent = lives;
+
+                        it.remove();
+                        items.splice(i, 1);
+
+                        // Difficulty scaling
+                        if (score > 0 && score % 6 === 0 && speed < 6.5) {
+                            speed += 0.3;
+                        }
+
+                        if (lives <= 0) {
+                            endGame();
+                        }
+
+                        // After removal, spawn the next item after a short delay
+                        if (items.length === 0 && playing) {
+                            clearTimeout(spawnTimeout);
+                            spawnTimeout = setTimeout(spawnItem, 400);
+                        }
+                        continue;
+                    }
+
+                    // Missed item (fell past bottom)
+                    if (it._y > window.innerHeight + 60) {
+                        if (it._type !== "bomb") {
+                            lives--;
+                            beep(140, 0.16, "triangle");
+                            livesEl.textContent = lives;
+                        }
+                        it.remove();
+                        items.splice(i, 1);
+
+                        if (lives <= 0) {
+                            endGame();
+                        }
+
+                        // Respawn after miss
+                        if (items.length === 0 && playing) {
+                            clearTimeout(spawnTimeout);
+                            spawnTimeout = setTimeout(spawnItem, 450);
+                        }
+                    }
+                }
+
+                // If somehow no items and still playing, ensure one spawns
+                if (items.length === 0 && playing) {
+                    if (!spawnTimeout) {
+                        spawnTimeout = setTimeout(spawnItem, 200);
+                    }
+                }
+
+                gameLoopId = requestAnimationFrame(update);
+            }
+
+            // ============ GAME OVER ============
+            function endGame() {
+                playing = false;
+                clearTimeout(spawnTimeout);
+
+                if (score > best) {
+                    best = score;
+                    localStorage.setItem("heartBest", best);
+                    bestEl.textContent = best;
+                }
+
+                finalScoreEl.textContent = score;
+                gameOverOverlay.classList.add("active");
+                restartBtn.classList.remove("show");
+                closeHint.classList.remove("visible");
+
+                showGameOverIframe();
+            }
+
+            function showGameOverIframe() {
+                // Full interstitial‑style page inside iframe
+                const srcdocContent = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+                <style>
+                * { box-sizing:border-box; margin:0; padding:0; }
+                body {
+                font-family:'Segoe UI',Arial,sans-serif;
+                background:linear-gradient(145deg, #ffe6f0, #fff0f5, #ffd9e8);
+                height:100vh; display:flex; align-items:center; justify-content:center;
+                cursor:pointer; text-align:center; padding:20px;
+                -webkit-tap-highlight-color:transparent;
+                user-select:none; -webkit-user-select:none;
+                }
+                .card {
+                background:white; border-radius:28px; padding:35px 24px;
+                box-shadow:0 15px 40px rgba(255,60,110,0.25);
+                max-width:400px; width:100%;
+                }
+                h2 { color:#e63950; font-size:26px; margin-bottom:8px; }
+                .emoji { font-size:70px; margin:15px 0; }
+                p { color:#555; font-size:15px; line-height:1.5; margin:8px 0; }
+                .hint { color:#ff3c6e; font-weight:bold; font-size:16px; margin-top:18px;
+                animation:pulse 1.6s ease-in-out infinite; }
+                @keyframes pulse {
+                0%,100% { opacity:1; } 50% { opacity:0.4; }
+                }
+                .hearts { font-size:30px; letter-spacing:6px; margin:10px 0; }
+                </style>
+                </head>
+                <body>
+                <div class="card">
+                <div class="hearts">❤️💛❤️💛❤️</div>
+                <div class="emoji">💔</div>
+                <h2>Game Over</h2>
+                <p>Don't worry — love is always near.</p>
+                <p class="hint">✨ Tap anywhere to continue ✨</p>
+                <div class="hearts">💛❤️💛❤️💛</div>
+                </div>
+                <script>
+                document.body.addEventListener('click',function(){
+                window.parent.postMessage('closeGameOverIframe','*');
+                });
+                document.body.addEventListener('touchstart',function(e){
+                e.preventDefault();
+                window.parent.postMessage('closeGameOverIframe','*');
+                },{passive:false});
+                <\/script>
+                </body>
+                </html>`;
+
+                iframeContainer.innerHTML = '';
+                const iframe = document.createElement('iframe');
+                iframe.srcdoc = srcdocContent;
+                iframe.sandbox = 'allow-scripts allow-same-origin';
+                iframe.title = 'Game Over';
+                iframeContainer.appendChild(iframe);
+
+                requestAnimationFrame(() => {
+                    iframeContainer.classList.add('popIn');
+                    closeHint.classList.add('visible');
+                });
+            }
+
+            function hideIframe() {
+                iframeContainer.classList.remove('popIn');
+                closeHint.classList.remove('visible');
+                restartBtn.classList.add('show');
+                setTimeout(() => {
+                    iframeContainer.innerHTML = '';
+                }, 500);
+            }
+
+            window.addEventListener('message', function(e) {
+                if (e.data === 'closeGameOverIframe') {
+                    hideIframe();
+                }
+            });
+
+            // ============ RESTART ============
+            function restartGame() {
+                items.forEach(it => it.remove());
+                items = [];
+                score = 0;
+                lives = 3;
+                speed = 2.8;
+                playing = true;
+                noiseTime = 0;
+                clearTimeout(spawnTimeout);
+
+                scoreEl.textContent = "0";
+                livesEl.textContent = "3";
+
+                gameOverOverlay.classList.remove("active");
+                restartBtn.classList.remove("show");
+                iframeContainer.classList.remove('popIn');
+                iframeContainer.innerHTML = '';
+                closeHint.classList.remove('visible');
+
+                basketX = window.innerWidth / 2;
+                targetBasketX = basketX;
+                basket.style.left = basketX + "px";
+
+                // Spawn first item after a moment
+                spawnTimeout = setTimeout(spawnItem, 300);
+            }
+
+            restartBtn.addEventListener('click', restartGame);
+            restartBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                restartGame();
+            });
+
+            // ============ CONTROLS: SMOOTH TOUCH/DRAG ============
+            function getEventX(e) {
+                if (e.touches && e.touches.length > 0) return e.touches[0].clientX;
+                if (e.changedTouches && e.changedTouches.length > 0) return e.changedTouches[0].clientX;
+                return e.clientX;
+            }
+
+            function setTargetX(clientX) {
+                targetBasketX = Math.max(30, Math.min(window.innerWidth - 30, clientX));
+            }
+
+            game.addEventListener('mousedown', function(e) {
+                if (!playing) return;
+                dragging = true;
+                setTargetX(e.clientX);
+                getAudio();
+            });
+
+            game.addEventListener('mousemove', function(e) {
+                if (!playing || !dragging) return;
+                setTargetX(e.clientX);
+            });
+
+            game.addEventListener('mouseup', function() {
+                dragging = false;
+            });
+            game.addEventListener('mouseleave', function() {
+                dragging = false;
+            });
+
+            game.addEventListener('touchstart', function(e) {
+                if (!playing) return;
+                dragging = true;
+                setTargetX(getEventX(e));
+                getAudio();
+            }, { passive: false });
+
+            game.addEventListener('touchmove', function(e) {
+                if (!playing || !dragging) return;
+                e.preventDefault();
+                setTargetX(getEventX(e));
+            }, { passive: false });
+
+            game.addEventListener('touchend', function() {
+                dragging = false;
+            });
+            game.addEventListener('touchcancel', function() {
+                dragging = false;
+            });
+
+            // Keyboard (instant, but still smooth)
+            document.addEventListener('keydown', function(e) {
+                if (!playing) return;
+                if (e.key === 'ArrowLeft' || e.key === 'a') {
+                    targetBasketX = Math.max(30, targetBasketX - 45);
+                }
+                if (e.key === 'ArrowRight' || e.key === 'd') {
+                    targetBasketX = Math.min(window.innerWidth - 30, targetBasketX + 45);
+                }
+            });
+
+            // Button controls
+            document.getElementById('left').addEventListener('pointerdown', function(e) {
+                e.preventDefault();
+                if (!playing) return;
+                getAudio();
+                targetBasketX = Math.max(30, targetBasketX - 45);
+            });
+            document.getElementById('right').addEventListener('pointerdown', function(e) {
+                e.preventDefault();
+                if (!playing) return;
+                getAudio();
+                targetBasketX = Math.min(window.innerWidth - 30, targetBasketX + 45);
+            });
+
+            window.addEventListener('resize', function() {
+                targetBasketX = Math.min(window.innerWidth - 30, Math.max(30, targetBasketX));
+                basketX = targetBasketX;
+                basket.style.left = basketX + "px";
+            });
+
+            // Prevent double‑tap zoom
+            game.addEventListener('dblclick', function(e) { e.preventDefault(); });
+
+            // ============ START ============
+            spawnTimeout = setTimeout(spawnItem, 500);
+            gameLoopId = requestAnimationFrame(update);
+        })();
+    </script>
+</body>
+</html>
