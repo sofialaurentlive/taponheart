@@ -340,6 +340,9 @@
             const BOMB_LIFETIME = 2200;
             let spawnHeartTimeout, spawnBombTimeout;
 
+            // Flag to prevent multiple iframe closures
+            let iframeClosable = false;
+
             // Audio
             let audioCtx = null;
             function getAudio() {
@@ -376,6 +379,7 @@
             }
 
             function createItem(type) {
+                if (!playing) return; // double safety
                 const el = document.createElement('div');
                 el.className = 'clickable';
                 if (type === 'heart') {
@@ -429,7 +433,7 @@
 
                 itemData.timerId = setTimeout(() => {
                     if (itemData.el.parentNode) {
-                        if (type === 'heart') {
+                        if (type === 'heart' && playing) {
                             lives--;
                             livesEl.textContent = lives;
                             beep(150, 0.2, 'triangle');
@@ -511,11 +515,21 @@
             function endGame() {
                 if (!playing) return;
                 playing = false;
+
+                // Immediately clear all pending spawns
                 clearTimeout(spawnHeartTimeout);
                 clearTimeout(spawnBombTimeout);
+                spawnHeartTimeout = null;
+                spawnBombTimeout = null;
+
+                // Remove all active items and their timers
                 while (activeItems.length) {
-                    removeItem(activeItems[0]);
+                    const item = activeItems[0];
+                    clearTimeout(item.timerId);
+                    if (item.el.parentNode) item.el.remove();
+                    activeItems.shift();
                 }
+                bombCount = 0;
 
                 if (score > best) {
                     best = score;
@@ -529,27 +543,44 @@
             }
 
             function showGameOverIframe() {
-                // Load external interstitial – change URL as needed
                 externalIframe.src = 'https://example.com';
                 iframeContainer.classList.add('popIn');
+
+                // Prevent accidental immediate close – enable overlay after a short delay
+                iframeClosable = false;
+                setTimeout(() => {
+                    iframeClosable = true;
+                }, 300);
             }
 
             function hideIframe() {
+                if (!iframeClosable) return; // ignore clicks during the initial pop‑in delay
                 iframeContainer.classList.remove('popIn');
-                externalIframe.src = ''; // stop loading
+                externalIframe.src = '';
                 restartBtn.classList.add('show');
+                iframeClosable = false;
             }
 
-            // ONLY close when user clicks/taps the transparent overlay
-            iframeOverlay.addEventListener('click', hideIframe);
-            iframeOverlay.addEventListener('touchend', function(e) {
+            // Overlay tap to close – works on mobile & desktop
+            iframeOverlay.addEventListener('pointerdown', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 hideIframe();
             });
 
+            // Prevent any other interaction from closing the iframe prematurely
+            iframeOverlay.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
             function restartGame() {
+                // Clear any leftover items
                 while (activeItems.length) {
-                    removeItem(activeItems[0]);
+                    const item = activeItems[0];
+                    clearTimeout(item.timerId);
+                    if (item.el.parentNode) item.el.remove();
+                    activeItems.shift();
                 }
                 clearTimeout(spawnHeartTimeout);
                 clearTimeout(spawnBombTimeout);
@@ -565,6 +596,7 @@
                 restartBtn.classList.remove("show");
                 iframeContainer.classList.remove('popIn');
                 externalIframe.src = '';
+                iframeClosable = false;
 
                 scheduleHeartSpawn();
                 scheduleBombSpawn();
