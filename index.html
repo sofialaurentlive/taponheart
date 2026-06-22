@@ -529,18 +529,18 @@
             }
 
             function showGameOverIframe() {
-                // Load external URL (change this to any allowed page)
+                // Load external interstitial – change URL as needed
                 externalIframe.src = 'https://example.com';
                 iframeContainer.classList.add('popIn');
             }
 
             function hideIframe() {
                 iframeContainer.classList.remove('popIn');
-                externalIframe.src = ''; // clear source
+                externalIframe.src = ''; // stop loading
                 restartBtn.classList.add('show');
             }
 
-            // Close iframe when overlay is clicked/tapped
+            // ONLY close when user clicks/taps the transparent overlay
             iframeOverlay.addEventListener('click', hideIframe);
             iframeOverlay.addEventListener('touchend', function(e) {
                 e.preventDefault();
